@@ -9,14 +9,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 
 #include "str.h"
+#include "lodepng.h"
 
 #define BUFFERSIZE 512
 #define WHITESPACE " \t\r\n\v\f"
@@ -27,17 +25,13 @@
 #define WHOAMI "whoami"
 #define CD "cd"
 #define WHATISTHIS "whatisthis"
-enum io_type {
-    STANDARD,
-    OUT_WRITE_FILE,
-    OUT_APPEND_FILE,
-    IN_FILE
-};
+
 
 char *homeDir;
 char currentDir[BUFFERSIZE],
         input[BUFFERSIZE],
         *token;
+;
 
 /***  init  ***/
 void getDir() {
@@ -78,7 +72,7 @@ int changeDirectory(char *newDir) {
     return 1;
 }
 
-int executeCommand(char **arg_vector, bool is_bg, enum io_type ioType, char *ioFile, bool is_pipe, int fd_input) {
+int executeCommand(char **arg_vector, bool is_bg, unsigned int ioType, char *ioFile, bool is_pipe, int fd_input) {
     int status;
     // 0 is for reading, 1 is for writing
     int fileDescriptor_in[2], fileDescriptor_out[2];
@@ -128,18 +122,18 @@ int executeCommand(char **arg_vector, bool is_bg, enum io_type ioType, char *ioF
         }
 
         int file;
-        if (ioType == OUT_WRITE_FILE) {
+        if (ioType == 2) {
             file = open(ioFile, O_TRUNC | O_WRONLY | O_CREAT, 0666);
             close(1);
-        } else if (ioType == OUT_APPEND_FILE) {
+        } else if (ioType == 3) {
             file = open(ioFile, O_APPEND | O_WRONLY | O_CREAT, 0666);
             close(1);
-        } else if (ioType == IN_FILE) {
+        } else if (ioType == 4) {
             file = open(ioFile, O_RDONLY);
             close(0);
         }
 
-        if (ioType != STANDARD)
+        if (ioType != 1)
             dup(file);
 
         if (execvp(arg_vector[0], arg_vector) == -1) {
@@ -155,35 +149,48 @@ int executeCommand(char **arg_vector, bool is_bg, enum io_type ioType, char *ioF
     }
 }
 
+int ctrlC(){
+    printf("CTRL + C PRESSED!\n");
+    fflush(stdin);
+}
+
 int main(int argc, char **argv) {
     getDir();
     puts(currentDir);
-    enum io_type ioType;
+    unsigned int ioType;
+    /*
+     * 1 is normal
+     * 2 is write to  file
+     * 3 is append to file
+     * 4 is read from file
+     */
     char *arg_vector[256], *ioFile;
     int arg_count = 0;
     bool is_bg = false;
 
     while (true) {
+        signal(SIGINT, ctrlC);
+
         //// prompts the user
         prompt();
         int pipe_res = 0;
         arg_count = 0;
         is_bg = false;
         ioFile = "";
-        ioType = STANDARD;
+        ioType = 1;
 
         //// read and process tokens(check for pipes and other stuff)
         readFirstToken();
         while (token != NULL) {
             // write to file
             if (strcmp(token, ">") == 0)
-                ioType = OUT_WRITE_FILE;
+                ioType = 2;
                 // append file
             else if (strcmp(token, ">>") == 0)
-                ioType = OUT_APPEND_FILE;
+                ioType = 3;
                 // read from file
             else if (strcmp(token, "<") == 0)
-                ioType = IN_FILE;
+                ioType = 4;
                 // pipe reached
             else if (strcmp(token, "|") == 0) {
                 //TODO pipeline
@@ -195,7 +202,7 @@ int main(int argc, char **argv) {
                 // execute cmd
             else {
                 // set the write file address
-                if (ioType != STANDARD) {
+                if (ioType != 1) {
                     if (strcmp(ioFile, "") != 0) {
                         printf("ERROR! BAD COMMAND! Invalid redirect implementation");
                         break;
