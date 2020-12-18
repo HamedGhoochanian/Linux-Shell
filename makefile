@@ -1,5 +1,9 @@
 build:
-	gcc -I -Wall  main.c -o shell
+	touch history.log
+	gcc -I -Wall  main.c -o shell -w
 
 run:
-	gcc -I -Wall  main.c -o shell; ./shell
+	touch history.log
+	gcc -I -Wall  main.c -o shell -w;
+	clear;
+	./shell;
