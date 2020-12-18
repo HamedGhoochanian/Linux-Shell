@@ -19,9 +19,6 @@
 #define BUFFERSIZE 512
 #define WHITESPACE " \t\r\n\v\f"
 
-/// log file address
-#define LOG "/home/hamed/workspace/shell-new/history.log"
-
 /// built in commands
 #define EXIT "exit"
 #define PWD "pwd"
@@ -30,7 +27,7 @@
 #define WHATISTHIS "whatisthis"
 #define HISTORY "history"
 
-char currentDir[BUFFERSIZE], input[BUFFERSIZE], *token, *homeDir;
+char currentDir[BUFFERSIZE], input[BUFFERSIZE], *token, *homeDir, *LOG;
 FILE *historyFile;
 
 /***  get home and current directories  ***/
@@ -61,6 +58,7 @@ void interact();
 void batch(char *fileName);
 
 int main(int argc, char **argv) {
+
     if (argc == 1) {
         interact();
     } else if (argc == 2) {
@@ -77,6 +75,8 @@ int main(int argc, char **argv) {
 }
 
 void getDir() {
+    LOG = getenv("HOME");
+    strcat(LOG, "/history.log");
     getcwd(currentDir, BUFFERSIZE);
     homeDir = getenv("HOME");
 }
