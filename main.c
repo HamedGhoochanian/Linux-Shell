@@ -1,7 +1,7 @@
 /*********
  * NAME: Hamed Ghoochanian
  * StudentID: 9712762454
- * UNIX SHELL PROJECT
+ * UNIX SHELL PROJECT, Autumn 2020
  *********/
 
 
@@ -18,7 +18,8 @@
 
 #define BUFFERSIZE 512
 #define WHITESPACE " \t\r\n\v\f"
-// log file address
+
+/// log file address
 #define LOG "/home/hamed/workspace/shell-new/history.log"
 
 /// built in commands
@@ -29,15 +30,52 @@
 #define WHATISTHIS "whatisthis"
 #define HISTORY "history"
 
-
-char *homeDir;
-char currentDir[BUFFERSIZE],
-        input[BUFFERSIZE],
-        *token;
-
+char currentDir[BUFFERSIZE], input[BUFFERSIZE], *token, *homeDir;
 FILE *historyFile;
 
 /***  get home and current directories  ***/
+void getDir();
+
+/*** prompt the user ***/
+void prompt();
+
+/*** read line and print it to file ***/
+void readTokens();
+
+/*** cd ***/
+int changeDirectory(char *newDir);
+
+/*** receives the argument vector and executes the command(s) ***/
+int executeCommand(char **arg_vector, bool is_bg, unsigned int ioType, char *ioFile, bool is_pipe, int fd_input);
+
+/// ctrl + c signal controller
+int ctrlC();
+
+///checks if a file exists
+int fileExists(const char *filename);
+
+/*** initiate interactive mode ***/
+void interact();
+
+/*** run batch file ***/
+void batch(char *fileName);
+
+int main(int argc, char **argv) {
+    if (argc == 1) {
+        interact();
+    } else if (argc == 2) {
+        char *fileName = argv[1];
+        if (!fileExists(fileName)) {
+            printf("%s does not exist", fileName);
+            exit(1);
+        }
+        batch(fileName);
+    } else {
+        printf("too many arguments");
+        exit(1);
+    }
+}
+
 void getDir() {
     getcwd(currentDir, BUFFERSIZE);
     homeDir = getenv("HOME");
@@ -55,20 +93,19 @@ void readTokens() {
     historyFile = fopen(LOG, "a");
     int l = fgets(input, BUFFERSIZE, stdin);
     if (l == NULL) {
-        printf("bye bye");
+        printf("\nBYE BYE, btw you pressed CTRL+D");
         exit(0);
     }
-    if (strcmp(input,"\n")!=0){
+    if (strcmp(input, "\n") != 0) {
         fputs(input, historyFile);
     }
     fclose(historyFile);
-    printf("%s", input);
     char *enter = strchr(input, '\n');
     if (enter != NULL) enter = '\0';
     token = strtok(input, WHITESPACE);
 }
 
-/*** cd ***/
+/*** cd command ***/
 int changeDirectory(char *newDir) {
     if (!newDir)
         return 2;
@@ -320,7 +357,7 @@ void batch(char *fileName) {
 
     fp = fopen(fileName, "r");
     while ((readFile = getline(&line, &len, fp)) != -1) {
-        printf("%s\n", line);
+        printf("command: %s", line);
         signal(SIGINT, ctrlC);
 
         //// prompts the user
@@ -413,20 +450,4 @@ void batch(char *fileName) {
         }
     }
     fclose(fp);
-}
-
-int main(int argc, char **argv) {
-    if (argc == 1) {
-        interact();
-    } else if (argc == 2) {
-        char *fileName = argv[1];
-        if (!fileExists(fileName)) {
-            printf("%s does not exist", fileName);
-            exit(1);
-        }
-        batch(fileName);
-    } else {
-        printf("too many arguments");
-        exit(1);
-    }
 }
